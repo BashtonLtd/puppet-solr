@@ -17,6 +17,7 @@ class solr::config(
   $version        = $solr::params::solr_version,
   $mirror         = $solr::params::mirror_site,
   $jetty_home     = $solr::params::jetty_home,
+  $jetty_port     = $solr::params::jetty_port,
   $solr_home      = $solr::params::solr_home,
   $dist_root      = $solr::params::dist_root,
   ) inherits solr::params {
@@ -25,17 +26,17 @@ class solr::config(
   $download_url   = "${mirror}/${version}/${dl_name}"
 
   #Copy the jetty config file
-  file { '/etc/default/jetty':
+  file {"/etc/default/${solr::params::jetty}":
     ensure  => file,
-    source  => 'puppet:///modules/solr/jetty-default',
-    require => Package['jetty'],
+    content => template('solr/jetty-default.erb'),
+    require => Package[$solr::params::jetty],
   }
 
   file { $solr_home:
     ensure  => directory,
     owner   => 'jetty',
     group   => 'jetty',
-    require => Package['jetty'],
+    require => Package[$solr::params::jetty],
   }
 
   # download only if WEB-INF is not present and tgz file is not in $dist_root:
@@ -58,13 +59,15 @@ class solr::config(
   }
 
   # have to copy logging jars separately from solr 4.3 onwards
-  exec { 'copy-solr':
-    path    => [ '/bin', '/sbin' , '/usr/bin', '/usr/sbin', '/usr/local/bin' ],
-    command =>  "jar xvf ${dist_root}/solr-${version}/dist/solr-${version}.war; \
-    cp ${dist_root}/solr-${version}/example/lib/ext/*.jar WEB-INF/lib",
-    cwd     =>  $solr_home,
-    onlyif  =>  "test ! -d ${solr_home}/WEB-INF",
-    require =>  Exec['extract-solr'],
+  if versioncmp($version, '5.3.0') < 0 {
+    exec { 'copy-solr':
+      path    => [ '/bin', '/sbin' , '/usr/bin', '/usr/sbin', '/usr/local/bin' ],
+      command =>  "jar xvf ${dist_root}/solr-${version}/dist/solr-${version}.war; \
+                   cp ${dist_root}/solr-${version}/example/lib/ext/*.jar WEB-INF/lib",
+      cwd     =>  $solr_home,
+      onlyif  =>  "test ! -d ${solr_home}/WEB-INF",
+      require =>  Exec['extract-solr'],
+    }
   }
 
   file { '/var/lib/solr':
@@ -72,7 +75,7 @@ class solr::config(
     owner   => 'jetty',
     group   => 'jetty',
     mode    => '0700',
-    require => Package['jetty'],
+    require => Package[$solr::params::jetty],
   }
 
   file { "${solr_home}/solr.xml":
@@ -80,7 +83,7 @@ class solr::config(
     owner   => 'jetty',
     group   => 'jetty',
     content => template('solr/solr.xml.erb'),
-    require => File['/etc/default/jetty'],
+    require => File["/etc/default/${jetty}"],
   }
 
   file { "${jetty_home}/webapps/solr":
@@ -93,4 +96,3 @@ class solr::config(
     require   =>  File["${jetty_home}/webapps/solr"],
   }
 }
-

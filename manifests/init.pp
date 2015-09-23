@@ -41,6 +41,7 @@ class solr (
   $version    = 'UNSET',
   $mirror     = 'UNSET',
   $dist_root  = 'UNSET',
+  $jetty_port = undef,
 ) {
 
   include solr::params
@@ -65,12 +66,17 @@ class solr (
     default   => $dist_root,
   }
 
+  if ! $jetty_port {
+    $jetty_port = $::solr::params::jetty_port
+  }
+
   class {'solr::install': } ->
   class {'solr::config':
-    cores     => $my_cores,
-    version   => $my_version,
-    mirror    => $my_mirror,
-    dist_root => $my_dist_root,
+    cores      => $my_cores,
+    version    => $my_version,
+    mirror     => $my_mirror,
+    dist_root  => $my_dist_root,
+    jetty_port => $jetty_port,
   } ~>
   class {'solr::service': } ->
   Class['solr']

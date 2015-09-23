@@ -7,13 +7,31 @@
 #
 class solr::params {
 
-  $jetty_home    = '/usr/share/jetty'
+  case $::operatingsystem {
+    'Debian': {
+      case $::operatingsystemmajrelease {
+        '8': {
+          $jetty = 'jetty8'
+        }
+        default: {
+          $jetty = undef
+        }
+      }
+    }
+    'Ubuntu': {
+      $jetty = 'jetty'
+    }
+    default: {
+      $jetty = undef
+    }
+  }
+
+  $jetty_home    = "/usr/share/${jetty}"
+  $jetty_port    = '8983'
   $solr_home     = '/usr/share/solr'
   $solr_version  = '4.7.2'
-  $mirror_site   = 'http://www.us.apache.org/dist/lucene/solr'
+  $mirror_site   = 'https://www.apache.org/dist/lucene/solr'
   $data_dir      = '/var/lib/solr'
   $cores         = ['default']
   $dist_root     = '/tmp'
-
 }
-
